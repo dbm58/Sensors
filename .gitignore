@@ -1,3 +1,6 @@
 /dist/
 /build/
 /lywsd02.egg-info/
+/venv/
+*~
+*.swp

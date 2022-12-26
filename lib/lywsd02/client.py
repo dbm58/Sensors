@@ -57,6 +57,10 @@ class Lywsd02Client:
                 self._peripheral.disconnect()
 
     @property
+    def mac(self)
+        return self._mac
+
+    @property
     def temperature(self):
         return self.data.temperature
 
@@ -116,7 +120,7 @@ class Lywsd02Client:
     def tz_offset(self):
         if self._tz_offset is not None:
             return self._tz_offset
-        elif time.daylight:
+        if time.localtime().tm_isdst and time.daylight:
             return -time.altzone // 3600
         else:
             return -time.timezone // 3600
