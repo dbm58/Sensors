@@ -1,59 +1,20 @@
 #!/usr/bin/env python
 
-import argparse, textwrap
+import argparse
 from datetime import datetime
 from lib import lywsd02
-
-def sync(client):
-    print('Synchronizing time of {}'.format(client.mac))
-    client.time = datetime.now()
-
-def read(client):
-    print('Fetching data from {}'.format(client.mac))
-    batt = client.battery
-    data = client.data
-    time = client.time
-    units = client.units
-    temp = data.temperature if units == 'C' else (data.temperature * 9/5 + 32)
-    print(f'Battery:     {batt}%')
-    print(f'Humidity:    {data.humidity}%')
-    print(f'Temperature: {temp:.1f}°{units}')
-    print(f'Time:        {time[0]:%H:%M:%S}')
-    print()
-
-def setc(client):
-    print('Setting temperature units to C for {}'.format(client.mac))
-    client.units = 'C'
-
-def setf(client):
-    print('Setting temperature units to F for {}'.format(client.mac))
-    client.units = 'F'
-
-actions = {
-    'read': read,
-    'setc': setc,
-    'setf': setf,
-    'sync': sync
-}
+import Cli
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument(
-    'action',
-    help=textwrap.dedent('''\
-        Action to perform, either:
-        read - read current values from device
-        setc - set temperature unit on display to Celsius
-        setf - set temperature unit on display to Fahrenheit
-        sync - synchronize time with this machine
-        '''),
-    choices=list(actions))
+dispatch, choices, helptext = Cli.Commands.create(parser);
+parser.add_argument('command', help=helptext, choices=choices)
 parser.add_argument('mac', help='MAC address of LYWSD02 device', nargs='+')
 args = parser.parse_args()
 
 for mac in args.mac:
     try:
         client = lywsd02.Lywsd02Client(mac)
-        actions[args.action](client)
+        dispatch[args.action](client)
     except Exception as e:
         print(e)
 

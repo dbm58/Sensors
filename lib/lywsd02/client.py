@@ -57,7 +57,7 @@ class Lywsd02Client:
                 self._peripheral.disconnect()
 
     @property
-    def mac(self)
+    def mac(self):
         return self._mac
 
     @property
@@ -116,6 +116,8 @@ class Lywsd02Client:
             ch = self._peripheral.getCharacteristics(uuid=UUID_TIME)[0]
             ch.write(data, withResponse=True)
 
+    #  todo:  this should not be a property.  It should be an extension
+    #         of datetime instance
     @property
     def tz_offset(self):
         if self._tz_offset is not None:
@@ -125,6 +127,7 @@ class Lywsd02Client:
         else:
             return -time.timezone // 3600
 
+    #  todo:  I think that this is only needed because the getter was broken
     @tz_offset.setter
     def tz_offset(self, tz_offset: int):
         self._tz_offset = tz_offset
