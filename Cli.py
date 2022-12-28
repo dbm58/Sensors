@@ -1,5 +1,39 @@
 import inspect
+import string
+from types import SimpleNamespace
 
+from Adafruit_IO import Client, RequestError, Feed, Data
+
+import secrets
+
+def _read(client):
+    data = client.data
+    units = client.units
+    res  = SimpleNamespace(
+           **{
+                 'battery':     client.battery,
+                 'humidity':    data.humidity,
+                 'temperature': data.temperature if units == 'C' else (data.temperature * 9/5 + 32),
+                 'time':        client.time[0],
+                 'tzoffset':    client.time[1],
+                 'units':       units,
+             })
+    return res
+
+def _send(aio, feedBase, sensor, value):
+    feedName = feedBase.substitute({'sensor': sensor}).lower()
+    print(feedName)
+    try:
+        feed = aio.feeds(feedName)
+        print('feed exists')
+        print(feed)
+    except RequestError:
+        #  The feed doesn't exist.  Create it!
+        print('feed doesn''t exist')
+        newFeed = Feed(name=feedName)
+        feed = aio.create_feed(newFeed)
+    aio.send_data(feed.key, value)
+    
 class Commands(object):
     def __init__(self):
         pass
@@ -7,16 +41,21 @@ class Commands(object):
     def read(self, client):
         """read current values from device"""
         print('Fetching data from {}'.format(client.mac))
-        batt = client.battery
-        data = client.data
-        time = client.time
-        units = client.units
-        temp = data.temperature if units == 'C' else (data.temperature * 9/5 + 32)
-        print(f'Battery:     {batt}%')
+        data = _read(client)
+        print(f'Battery:     {data.battery}%')
         print(f'Humidity:    {data.humidity}%')
-        print(f'Temperature: {temp:.1f}°{units}')
-        print(f'Time:        {time[0]:%H:%M:%S}')
+        print(f'Temperature: {data.temperature:.1f}°{data.units}')
+        print(f'Time:        {data.time:%H:%M:%S}')
         print()
+    
+    def send(self, client):
+        """read data and send it to adafruit.io"""
+        data = _read(client)
+        aio = Client(secrets.userName, secrets.key)
+        feed = string.Template(f'{client.macNum}-$sensor')
+        _send(aio, feed, 'battery',     data.battery)
+        _send(aio, feed, 'humidity',    data.humidity)
+        _send(aio, feed, 'temperature', data.temperature)
     
     def setc(self, client):
         """set temperature unit on display to Celsius"""

@@ -61,6 +61,10 @@ class Lywsd02Client:
         return self._mac
 
     @property
+    def macNum(self):
+        return self._mac.replace(':', '')
+
+    @property
     def temperature(self):
         return self.data.temperature
 
