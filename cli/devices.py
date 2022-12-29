@@ -1,16 +1,23 @@
 import inspect
+import sys
 
-class Device(object):
+sys.path.append('..')
+from lib2 import Lywsd02
+from lib2 import Lywsd03
+
+class Devices(object):
     def __init__(self):
         pass
 
-    def lywsd02(self):
+    def lywsd02(self, mac):
         """Clock Thermometer"""
-        pass
+        device = Lywsd02(mac)
+        return device
 
-    def lywsd03(self):
+    def lywsd03(self, mac):
         """Thermometer/Hygrometer"""
-        pass
+        device = Lywsd03(mac)
+        return device
 
     @classmethod
     def _members(cls):
@@ -25,7 +32,7 @@ class Device(object):
 
     @classmethod
     def create(cls):
-        pass
+        return cls._members()
 
     @classmethod
     def add_parser(cls, parser):
