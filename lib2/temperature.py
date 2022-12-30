@@ -14,7 +14,27 @@ class Temperature:
         return self._value * 9/5 + 32
 
     def __format__(self, fmt):
-        # todo:  this should probably be :.1F, not :1F
+        """
+        Support for str.format() and f'...' strings
+
+        Syntax: [<fmt-spec>][<units-spec>]
+
+        Where:
+        <fmt-spec> can be any valid floating point format specification, but
+        without the type part (that is, 10.3, not 10.3d)
+
+        <units-spec> is one of: c, C, f, or F.  If included, a degree symbol
+        will be appended to the formatted value, followed by the <units-spec>.
+
+        If the <units-spec> is not include, the value will be in degrees C.  If
+        the <units-spec> is 'f' or 'F', then the value will be converted to 
+        Farhenheit before formatting.
+
+        Known issues:
+        * The degree symbol and units spec is always printed at the end of the
+          field.  Even if the left-adjust or center option is used
+          (e.g. {:<10.1C})
+        """
         if (fmt or '') == '':
             return f'{self._value}'
 
