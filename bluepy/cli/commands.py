@@ -63,8 +63,8 @@ class Commands:
         mac  = device.mac.replace(':', '')
         aio = Client(app_secrets.AIO_USER_NAME, app_secrets.AIO_KEY)
         feed = string.Template(f'{mac}-$sensor')
-        _send(aio, feed, 'battery',     data.battery)
-        _send(aio, feed, 'humidity',    data.humidity)
+        # _send(aio, feed, 'battery',     data.battery)
+        # _send(aio, feed, 'humidity',    data.humidity)
         _send(aio, feed, 'temperature', data.temperature.degrees_f)
 
     def setc(self, device):
