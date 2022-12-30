@@ -52,7 +52,7 @@ class Commands:
         data = device.data
         print(f'Battery:     {data.battery}%')
         print(f'Humidity:    {data.humidity}%')
-        print(f'Temperature: {data.temperature:1C} {data.temperature:1F}')
+        print(f'Temperature: {data.temperature:.1C} {data.temperature:.1F}')
         if data.time is not None:
             print(f'Time:        {data.time:%H:%M:%S}')
         print()

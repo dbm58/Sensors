@@ -1,5 +1,0 @@
-#!/bin/bash
-pushd /home/pi/lywsd02
-[ -d ./venv ] && source ./venv/bin/activate
-./lywsd02 send E7:2E:00:51:C0:95
-popd
