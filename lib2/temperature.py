@@ -17,22 +17,21 @@ class Temperature:
         # todo:  this should probably be :.1F, not :1F
         if (fmt or '') == '':
             return f'{self._value}'
-        if len(fmt) > 2:
-            raise ValueError('fmt can be at most 2 characters long')
 
-        decimals = 0
         units = ''
-        if len(fmt) == 2:
-            decimals = int(fmt[0])
-            units = fmt[1]
-        else:
-            if fmt.isnumeric():
-                decimals = int(fmt)
-            else:
-                units = fmt
+        formatted_units = ''
+        if fmt[-1] in ('c', 'C', 'f', 'F'):
+            units = fmt[-1]
+            formatted_units = f'{DEGREES}{fmt[-1]}'
+            fmt = fmt[:-1]
+
+        formatter = f':{fmt}' if len(fmt) > 0 else ''
+
         value = self.degrees_f if units in ('f', 'F') else self.degrees_c
-        fmt_str = f'{{:.{decimals}f}}{{}}{{}}'
-        return fmt_str.format(value, DEGREES, units)
+
+        fmt_str = f'{{{formatter}f}}{{}}'
+
+        return fmt_str.format(value, formatted_units)
 
     @classmethod
     def from_bytes(cls, value: bytes, fixed_point: int=1):

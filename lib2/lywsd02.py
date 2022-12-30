@@ -4,46 +4,51 @@ import logging
 import struct
 import time
 from datetime import datetime
+from types import SimpleNamespace
 
 from bluepy import btle
 
 from .read_data import ReadData
-
-# todo:  Temperature type
-# todo:  Get rid of SensorData tuple
+from .temperature import Temperature
 
 _LOGGER = logging.getLogger(__name__)
 
-UUID_UNITS       = 'EBE0CCBE-7A0A-4B0C-8A1A-6FF2997DA3A6'  # 0x00 - F, 0x01 - C    READ WRITE
-UUID_HISTORY     = 'EBE0CCBC-7A0A-4B0C-8A1A-6FF2997DA3A6'  # Last idx 152          READ NOTIFY
-UUID_TIME        = 'EBE0CCB7-7A0A-4B0C-8A1A-6FF2997DA3A6'  # 5 or 4 bytes          READ WRITE
-UUID_DATA        = 'EBE0CCC1-7A0A-4B0C-8A1A-6FF2997DA3A6'  # 3 bytes               READ NOTIFY
-UUID_BATTERY     = 'EBE0CCC4-7A0A-4B0C-8A1A-6FF2997DA3A6'  # 1 byte                READ
-UUID_NUM_RECORDS = 'EBE0CCB9-7A0A-4B0C-8A1A-6FF2997DA3A6'  # 8 bytes               READ
-UUID_RECORD_IDX  = 'EBE0CCBA-7A0A-4B0C-8A1A-6FF2997DA3A6'  # 4 bytes               READ WRITE
+characteristics = {
+                     'battery':       'EBE0CCC4-7A0A-4B0C-8A1A-6FF2997DA3A6',
+                     'data':          'EBE0CCC1-7A0A-4B0C-8A1A-6FF2997DA3A6',
+                     'firmware':      '00002a26-0000-1000-8000-00805f9b34fB',
+                     'hardware':      '00002A27-0000-1000-8000-00805f9b34fB',
+                     'history':       'EBE0CCBC-7A0A-4B0C-8A1A-6FF2997DA3A6',
+                     'humidity':      None,
+                     'model_number':  '00002A24-0000-1000-8000-00805f9b34fB',
+                     'serial_number': '00002A25-0000-1000-8000-00805f9b34fB',
+                     'software':      '00002A28-0000-1000-8000-00805f9b34fB',
+                     'manufacturer':  '00002A29-0000-1000-8000-00805f9b34fB',
+                     'num_records':   'EBE0CCB9-7A0A-4B0C-8A1A-6FF2997DA3A6',
+                     'record_idx':    'EBE0CCBA-7A0A-4B0C-8A1A-6FF2997DA3A6',
+                     'temperature':   None,
+                     'time':          'EBE0CCB7-7A0A-4B0C-8A1A-6FF2997DA3A6',
+                     'units':         'EBE0CCBE-7A0A-4B0C-8A1A-6FF2997DA3A6',
+                  }
+uuids = SimpleNamespace(**characteristics)
 
+UNITS = {
+    b'\x01': 'F',
+    b'\xff': 'C',
+}
 
-class SensorData(collections.namedtuple('SensorDataBase', ['temperature', 'humidity'])):
-    __slots__ = ()
-
+UNITS_CODES = {
+    'C': b'\xff',
+    'F': b'\x01',
+}
 
 class Lywsd02:
-    UNITS = {
-        b'\x01': 'F',
-        b'\xff': 'C',
-    }
-    UNITS_CODES = {
-        'C': b'\xff',
-        'F': b'\x01',
-    }
-
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, mac, notification_timeout=5.0):
         self._mac = mac
         self._peripheral = btle.Peripheral()
         self._notification_timeout = notification_timeout
         self._handles = {}
-        self._tz_offset = None
-        self._data = SensorData(None, None)
         self._history_data = collections.OrderedDict()
         self._context_depth = 0
 
@@ -51,7 +56,179 @@ class Lywsd02:
         self._humidity = None
         self._temperature = None
         self._time = None
+        self._tz_offset = None
         self._units = None
+
+    @property
+    def battery(self):
+        if self._battery is not None:
+            return self._battery
+
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.battery)[0]
+            self._battery = ord(char.read())
+        return self._battery
+
+    @property
+    def data(self):
+        self._get_sensor_data()
+        res = ReadData(
+            self.battery,
+            self.humidity,
+            self.temperature,
+            self.time,
+            self.tz_offset,
+            self.units,
+        )
+        return res
+
+    @property
+    def history_data(self):
+        self._get_history_data()
+        return self._history_data
+
+    @property
+    def history_index(self):
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.record_idx)[0]
+            value = char.read()
+        _idx = 0 if len(value) == 0 else struct.unpack_from('I', value)
+        return _idx
+
+    @history_index.setter
+    def history_index(self, value):
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.record_idx)[0]
+            char.write(struct.pack('I', value), withResponse=True)
+
+    @property
+    def humidity(self):
+        return self._humidity
+
+    @property
+    def mac(self):
+        return self._mac
+
+    @property
+    def num_stored_entries(self):
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.num_records)[0]
+            value = char.read()
+        total_records, current_records = struct.unpack_from('II', value)
+        return total_records, current_records
+
+    @property
+    def temperature(self):
+        return self._temperature
+
+    @property
+    def time(self):
+        if self._time is not None:
+            return self._time
+
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.time)[0]
+            value = char.read()
+        if len(value) == 5:
+            device_time, tz_offset = struct.unpack('Ib', value)
+        else:
+            device_time = struct.unpack('I', value)[0]
+            tz_offset = 0
+        self._time = datetime.fromtimestamp(device_time)
+        self._tz_offset = tz_offset
+        return self._time
+
+    @time.setter
+    def time(self, new_time: datetime):
+        data = struct.pack('Ib', int(new_time.timestamp()), self.tz_offset)
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.time)[0]
+            char.write(data, withResponse=True)
+
+    #  todo:  this should not be a property.  It should be an extension
+    #         of datetime instance
+    @property
+    def tz_offset(self):
+        if self._tz_offset is not None:
+            return self._tz_offset
+        if time.localtime().tm_isdst and time.daylight:
+            return -time.altzone // 3600
+        return -time.timezone // 3600
+
+    #  todo:  I think that this is only needed because the getter was broken
+    @tz_offset.setter
+    def tz_offset(self, tz_offset: int):
+        self._tz_offset = tz_offset
+
+    @property
+    def units(self):
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.units)[0]
+            value = char.read()
+        return UNITS[value]
+
+    @units.setter
+    def units(self, value):
+        if value.upper() not in UNITS_CODES:
+            raise ValueError(
+                f'Units value must be one of {list(UNITS_CODES.keys())}')
+
+        with self.connect():
+            char = self._peripheral.getCharacteristics(uuid=uuids.units)[0]
+            char.write(UNITS_CODES[value.upper()], withResponse=True)
+
+    def _get_sensor_data(self):
+        if self._temperature is not None:
+            return
+
+        with self.connect():
+            self._subscribe(uuids.data, self._process_sensor_data)
+
+            if not self._peripheral.waitForNotifications(
+                    self._notification_timeout):
+                raise TimeoutError(f'No data from device for {self._notification_timeout} seconds')
+
+    def _get_history_data(self):
+        with self.connect():
+            self._subscribe(uuids.history, self._process_history_data)
+
+            while True:
+                if not self._peripheral.waitForNotifications(
+                        self._notification_timeout):
+                    break
+
+    # pylint: disable=invalid-name
+    def handleNotification(self, handle, data):
+        func = self._handles.get(handle)
+        if func:
+            func(data)
+
+    def _subscribe(self, uuid, callback):
+        self._peripheral.setDelegate(self)
+        char = self._peripheral.getCharacteristics(uuid=uuid)[0]
+        self._handles[char.getHandle()] = callback
+        desc = char.getDescriptors(forUUID=0x2902)[0]
+
+        desc.write(0x01.to_bytes(2, byteorder="little"), withResponse=True)
+
+    def _process_sensor_data(self, data):
+        if self._temperature is not None:
+            return
+
+        temperature, humidity = struct.unpack_from('hB', data)
+        temperature /= 100
+
+        self._temperature = Temperature(temperature)
+        self._humidity    = humidity
+
+    def _process_history_data(self, data):
+        (idx, timestamp, max_temp, max_hum, min_temp, min_hum) = struct.unpack_from('<IIhBhB', data)
+
+        date = datetime.fromtimestamp(timestamp)
+        min_temp /= 100
+        max_temp /= 100
+
+        self._history_data[idx] = [date, min_temp, min_hum, max_temp, max_hum]
 
     @contextlib.contextmanager
     def connect(self):
@@ -66,168 +243,3 @@ class Lywsd02:
             if self._context_depth == 0:
                 _LOGGER.debug('Disconnecting from %s', self._mac)
                 self._peripheral.disconnect()
-
-    @property
-    def mac(self):
-        return self._mac
-
-    @property
-    def macNum(self):
-        return self._mac.replace(':', '')
-
-    @property
-    def temperature(self):
-        return self.data.temperature
-
-    @property
-    def humidity(self):
-        return self.data.humidity
-
-    @property
-    def data(self):
-        self._get_sensor_data()
-        res = ReadData(
-            self.battery,
-            self._data.humidity,
-            self._data.temperature,
-            self.time[0],
-            None,
-            self.units,
-        )
-
-        return res
-
-    @property
-    def units(self):
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_UNITS)[0]
-            value = ch.read()
-        return self.UNITS[value]
-
-    @units.setter
-    def units(self, value):
-        if value.upper() not in self.UNITS_CODES.keys():
-            raise ValueError(
-                'Units value must be one of %s' % self.UNITS_CODES.keys())
-
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_UNITS)[0]
-            ch.write(self.UNITS_CODES[value.upper()], withResponse=True)
-
-    @property
-    def battery(self):
-        if self._battery is not None:
-            return self._battery
-
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_BATTERY)[0]
-            self._battery = ord(ch.read())
-        return self._battery
-
-    @property
-    def time(self):
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_TIME)[0]
-            value = ch.read()
-        if len(value) == 5:
-            ts, tz_offset = struct.unpack('Ib', value)
-        else:
-            ts = struct.unpack('I', value)[0]
-            tz_offset = 0
-        return datetime.fromtimestamp(ts), tz_offset
-
-    @time.setter
-    def time(self, dt: datetime):
-        data = struct.pack('Ib', int(dt.timestamp()), self.tz_offset)
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_TIME)[0]
-            ch.write(data, withResponse=True)
-
-    #  todo:  this should not be a property.  It should be an extension
-    #         of datetime instance
-    @property
-    def tz_offset(self):
-        if self._tz_offset is not None:
-            return self._tz_offset
-        if time.localtime().tm_isdst and time.daylight:
-            return -time.altzone // 3600
-        else:
-            return -time.timezone // 3600
-
-    #  todo:  I think that this is only needed because the getter was broken
-    @tz_offset.setter
-    def tz_offset(self, tz_offset: int):
-        self._tz_offset = tz_offset
-
-    @property
-    def history_index(self):
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_RECORD_IDX)[0]
-            value = ch.read()
-        _idx = 0 if len(value) == 0 else struct.unpack_from('I', value)
-        return _idx
-
-    @history_index.setter
-    def history_index(self, value):
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_RECORD_IDX)[0]
-            ch.write(struct.pack('I', value), withResponse=True)
-
-    @property
-    def num_stored_entries(self):
-        with self.connect():
-            ch = self._peripheral.getCharacteristics(uuid=UUID_NUM_RECORDS)[0]
-            value = ch.read()
-        total_records, current_records = struct.unpack_from('II', value)
-        return total_records, current_records
-
-    @property
-    def history_data(self):
-        self._get_history_data()
-        return self._history_data
-
-    def _get_sensor_data(self):
-        with self.connect():
-            self._subscribe(UUID_DATA, self._process_sensor_data)
-
-            if not self._peripheral.waitForNotifications(
-                    self._notification_timeout):
-                raise TimeoutError('No data from device for {} seconds'.format(
-                    self._notification_timeout))
-
-    def _get_history_data(self):
-        with self.connect():
-            self._subscribe(UUID_HISTORY, self._process_history_data)
-
-            while True:
-                if not self._peripheral.waitForNotifications(
-                        self._notification_timeout):
-                    break
-
-    def handleNotification(self, handle, data):
-        func = self._handles.get(handle)
-        if func:
-            func(data)
-
-    def _subscribe(self, uuid, callback):
-        self._peripheral.setDelegate(self)
-        ch = self._peripheral.getCharacteristics(uuid=uuid)[0]
-        self._handles[ch.getHandle()] = callback
-        desc = ch.getDescriptors(forUUID=0x2902)[0]
-
-        desc.write(0x01.to_bytes(2, byteorder="little"), withResponse=True)
-
-    def _process_sensor_data(self, data):
-        temperature, humidity = struct.unpack_from('hB', data)
-        temperature /= 100
-
-        self._data = SensorData(temperature=temperature, humidity=humidity)
-
-    def _process_history_data(self, data):
-        (idx, ts, max_temp, max_hum, min_temp, min_hum) = struct.unpack_from('<IIhBhB', data)
-
-        ts = datetime.fromtimestamp(ts)
-        min_temp /= 100
-        max_temp /= 100
-
-        self._history_data[idx] = [ts, min_temp, min_hum, max_temp, max_hum]

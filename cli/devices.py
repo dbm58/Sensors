@@ -5,7 +5,7 @@ sys.path.append('..')
 from lib2 import Lywsd02
 from lib2 import Lywsd03
 
-class Devices(object):
+class Devices:
     def __init__(self):
         pass
 
@@ -23,7 +23,7 @@ class Devices(object):
     def _members(cls):
         members = inspect.getmembers(
                 cls(),
-                predicate=lambda m: 
+                predicate=lambda m:
                     inspect.isroutine(m)
                     and (not m.__name__.startswith('_'))
                     and (not m.__self__ == cls)
@@ -42,7 +42,7 @@ class Devices(object):
         helptext = ['Device to connect to.  One of: ']
         helptext.extend([f'{a} - {members[a].__doc__}' for a in choices])
         helptext = '\n'.join(helptext)
-        
+
         parser.add_argument('device', help=helptext, choices=choices)
 
         return choices

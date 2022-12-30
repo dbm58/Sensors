@@ -8,4 +8,3 @@ class ReadData(NamedTuple):
     time:        datetime
     tzoffset:    int
     units:       str
-

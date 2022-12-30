@@ -1,31 +1,30 @@
-from datetime import datetime
 import inspect
 import string
 import sys
 
 from Adafruit_IO import Client, RequestError, Feed, Data
 
-from .devices import Devices
 sys.path.append('..')
 import app_secrets
-from lib2 import ReadData
-
-DEGREES = u'\N{DEGREE SIGN}'
 
 def _send(aio, feed_base, sensor, value):
-    if value == None:
+    #  This shouldn't be a separate command
+    #  This is an alternate output type
+    #  sensor lywsd03 read ##:##:##:##:## --console
+    #  sensor lywsd03 read ##:##:##:##:## --aio
+    if value is None:
         return
 
-    feedName = feed_base.substitute({'sensor': sensor}).lower()
-    print(feedName)
+    feed_name = feed_base.substitute({'sensor': sensor}).lower()
+    print(feed_name)
     try:
-        feed = aio.feeds(feedName)
+        feed = aio.feeds(feed_name)
         print('feed exists')
         print(feed)
     except RequestError:
         #  The feed doesn't exist.  Create it!
         print('feed doesn\'t exist')
-        new_feed = Feed(name=feedName)
+        new_feed = Feed(name=feed_name)
         feed = aio.create_feed(new_feed)
     aio.send_data(feed.key, value)
 
@@ -85,21 +84,18 @@ class Commands:
     def temperature(self, device):
         """current temperature reading"""
         print(f'Reading temperature from {device.mac}')
-        temperature = device.temperature
-        temperature_f = temperature * 9/5 + 32
-        print(f'Temperature: {temperature:.1f}{DEGREES}C {temperature_f:.1f}{DEGREES}F')
+        print(f'Temperature: {device.temperature:1C} {device.temperature:1F}')
 
     @classmethod
     def _members(cls):
         members = inspect.getmembers(
                 cls(),
-                predicate=lambda m: 
+                predicate=lambda m:
                     inspect.isroutine(m)
                     and (not m.__name__.startswith('_'))
                     and (not m.__self__ == cls)
                 )
         return dict(members)
-        device.time = datetime.now()
 
     @classmethod
     def create(cls):
