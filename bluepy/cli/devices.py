@@ -2,8 +2,8 @@ import inspect
 import sys
 
 sys.path.append('..')
-from lib2 import Lywsd02
-from lib2 import Lywsd03
+from lib import Lywsd02
+from lib import Lywsd03
 
 class Devices:
     def __init__(self):

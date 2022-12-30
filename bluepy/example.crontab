@@ -1,0 +1,4 @@
+#
+#  Run the sensor command every 15 minutes.  Use the push2aio 
+#  wrapper to set up the environment, and pass in the MACs, etc.
+*/15 * * * * /home/pi/ble-sensor/bluepy/push2aio > /var/log/push2aio 2>&1
