@@ -1,8 +1,10 @@
-# ble-sensor
+# ble-sensor/bluepy
 
 ## Description 
 
 Library and CLI to read Xiami LYWSD02 and LYWSD03 temperature/humidity sensors.  Originally based on https://github.com/h4/lywsd02, but pretty heavily modified.
+
+This project uses the `bluepy` package, which is no longer under active development.
 
 ## Installation
 
