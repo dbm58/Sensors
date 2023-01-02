@@ -1,9 +1,10 @@
 import collections
 import contextlib
+from datetime import datetime
+from functools import cached_property
 import logging
 import struct
 import time
-from datetime import datetime
 from types import SimpleNamespace
 
 from bluepy import btle
@@ -52,35 +53,35 @@ class Lywsd02:
         self._history_data = collections.OrderedDict()
         self._context_depth = 0
 
-        self._battery = None
         self._humidity = None
         self._temperature = None
-        self._time = None
         self._tz_offset = None
-        self._units = None
 
-    @property
+    @cached_property
     def battery(self):
-        if self._battery is not None:
-            return self._battery
-
         with self.connect():
             char = self._peripheral.getCharacteristics(uuid=uuids.battery)[0]
-            self._battery = ord(char.read())
-        return self._battery
+            return ord(char.read())
+
+    @cached_property
+    def _data(self):
+        self._get_sensor_data()
+        return SimpleNamespace(temperature=self._temperature, humidity=self._humidity)
 
     @property
     def data(self):
-        self._get_sensor_data()
-        res = ReadData(
-            self.battery,
-            self.humidity,
-            self.temperature,
-            self.time,
-            self.tz_offset,
-            self.units,
-        )
-        return res
+        #  we open a connection here so that each property doesn't open
+        #  it's own.  this should significantly speed things up
+        with self.connect():
+            res = ReadData(
+                self.battery,
+                self._data.humidity,
+                self._data.temperature,
+                self.time,
+                self.tz_offset,
+                self.units,
+            )
+            return res
 
     @property
     def history_data(self):
@@ -103,13 +104,13 @@ class Lywsd02:
 
     @property
     def humidity(self):
-        return self._humidity
+        return self._data.humidity
 
     @property
     def mac(self):
         return self._mac
 
-    @property
+    @cached_property
     def num_stored_entries(self):
         with self.connect():
             char = self._peripheral.getCharacteristics(uuid=uuids.num_records)[0]
@@ -119,13 +120,17 @@ class Lywsd02:
 
     @property
     def temperature(self):
-        return self._temperature
+        return self._data.temperature
 
     @property
     def time(self):
-        if self._time is not None:
-            return self._time
-
+        #  note this is not a cached property.  If we are getting the time
+        #  from the device, we want the current time.  Not the time this
+        #  property was first accessed.
+        #
+        #  the same could be said of the temperature, et.al.  Maybe this 
+        #  should be cahced?  Create a new instance of this object to get
+        #  updates?
         with self.connect():
             char = self._peripheral.getCharacteristics(uuid=uuids.time)[0]
             value = char.read()
@@ -134,9 +139,7 @@ class Lywsd02:
         else:
             device_time = struct.unpack('I', value)[0]
             tz_offset = 0
-        self._time = datetime.fromtimestamp(device_time)
-        self._tz_offset = tz_offset
-        return self._time
+        return datetime.fromtimestamp(device_time)
 
     @time.setter
     def time(self, new_time: datetime):
@@ -160,7 +163,7 @@ class Lywsd02:
     def tz_offset(self, tz_offset: int):
         self._tz_offset = tz_offset
 
-    @property
+    @cached_property
     def units(self):
         with self.connect():
             char = self._peripheral.getCharacteristics(uuid=uuids.units)[0]
@@ -178,9 +181,6 @@ class Lywsd02:
             char.write(UNITS_CODES[value.upper()], withResponse=True)
 
     def _get_sensor_data(self):
-        if self._temperature is not None:
-            return
-
         with self.connect():
             self._subscribe(uuids.data, self._process_sensor_data)
 
@@ -212,9 +212,6 @@ class Lywsd02:
         desc.write(0x01.to_bytes(2, byteorder="little"), withResponse=True)
 
     def _process_sensor_data(self, data):
-        if self._temperature is not None:
-            return
-
         temperature, humidity = struct.unpack_from('hB', data)
         temperature /= 100
 
