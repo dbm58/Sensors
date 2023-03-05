@@ -2,6 +2,8 @@
 pushd `dirname $BASH_SOURCE`
 [ -d ./venv ] && source ./venv/bin/activate
 ./sensor lywsd02 send E7:2E:00:51:C0:95 # LYWSD02
-./sensor lywsd03 send A4:C1:38:36:1B:73 # ATC_361B73
-./sensor lywsd03 send A4:C1:38:B9:18:1F # ATC_B9181F
+./sensor lywsd03 send A4:C1:38:36:1B:73 # ATC_361B73 - cold frame
+./sensor lywsd03 send A4:C1:38:B9:18:1F # ATC_B9181F - roller
+./sensor lywsd03 send A4:C1:38:43:61:0E # ATC_43610E - carol
+./sensor lywsd03 send A4:C1:38:29:CA:D6 # ATC_29CAD6 - dennis
 popd
