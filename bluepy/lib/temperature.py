@@ -55,4 +55,4 @@ class Temperature:
 
     @classmethod
     def from_bytes(cls, value: bytes, fixed_point: int=1):
-        return cls(int.from_bytes(value, byteorder='little') / fixed_point)
+        return cls(int.from_bytes(value, byteorder='little', signed=True) / fixed_point)
