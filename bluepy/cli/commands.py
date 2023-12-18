@@ -67,6 +67,14 @@ class Commands:
         # _send(aio, feed, 'humidity',    data.humidity)
         _send(aio, feed, 'temperature', data.temperature.degrees_f)
 
+    def sendh(self, device):
+        """read humidity data and send it to adafruit.io"""
+        data = device.data
+        mac  = device.mac.replace(':', '')
+        aio = Client(app_secrets.AIO_USER_NAME, app_secrets.AIO_KEY)
+        feed = string.Template(f'{mac}-$sensor')
+        _send(aio, feed, 'humidity',    data.humidity)
+
     def setc(self, device):
         """set temperature unit on display to Celsius"""
         print(f'Setting temperature units to C for {device.mac}')
