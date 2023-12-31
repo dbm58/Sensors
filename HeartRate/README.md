@@ -11,3 +11,4 @@ https://www.bluetooth.com/specifications/assigned-numbers/
 
 Search github watch subscriptions for whoop.  Also look at esprecense (sp?) which uses Whoop (and others) to identify a persons location in a building.
 
+Python code to read HR?:  https://stackoverflow.com/questions/72539419/unable-to-read-heart-rate-service-over-bluetooth
