@@ -1,0 +1,13 @@
+#  -----------------------------------------------
+#  to install:
+#      sudo cp push2aio.logrotate /etc/logrotate.d
+#  -----------------------------------------------
+/var/log/push2aio
+{
+	rotate 7
+	daily
+	missingok
+	delaycompress
+	compress
+	endscript
+}
