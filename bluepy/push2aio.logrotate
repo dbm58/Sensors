@@ -9,5 +9,6 @@
 	missingok
 	delaycompress
 	compress
+	create 0660 root adm
 	endscript
 }
