@@ -25,9 +25,8 @@ def _send(aio, feed_name, value):
     aio.send_data(feed.key, value)
 
 
-with open('weather.json') as f:
-    x = json.load(f)
-temp = x['current_condition'][0]['temp_F']
+weatherData = json.load(sys.stdin)
+temp = weatherData['current_condition'][0]['temp_F']
 print(temp)
 
 aio = Client(app_secrets.AIO_USER_NAME, app_secrets.AIO_KEY)

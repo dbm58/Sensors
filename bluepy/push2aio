@@ -1,19 +1,51 @@
 #!/bin/bash
+
+function query()
+{
+    #  $1 = device type
+    #  $2 = command
+    #  $3 = mac
+    ./sensor $1 $2 $3
+}
+
+function queryWithRetry()
+{
+    query $1 $2 $3
+    if [ $? -gt 0 ]; then
+        echo retry
+        sleep 2
+        query $1 $2 $3
+    fi
+    if [ $? -gt 0 ]; then
+        echo retry 2
+        sleep 2
+        query $1 $2 $3
+    fi
+}
+
+function getWeather()
+{
+    TMP_FILE=/tmp/push2aio.weather.json
+    rm -f $TMP_FILE
+    curl wttr.in/43.05,-87.98?format=j1 > $TMP_FILE
+    ./sendWeather < $TMP_FILE
+    rm -f $TMP_FILE
+}
+
 pushd `dirname $BASH_SOURCE`
+
 [ -d ./venv ] && source ./venv/bin/activate
 
-./sensor lywsd02 send E7:2E:00:51:C0:95 # LYWSD02
-./sensor lywsd02 sendh E7:2E:00:51:C0:95 # LYWSD02
-#./sensor lywsd03 send A4:C1:38:36:1B:73 # ATC_361B73 - dead
-#./sensor lywsd03 send A4:C1:38:B9:18:1F # ATC_B9181F - dead
-./sensor lywsd03 send  A4:C1:38:43:61:0E # ATC_43610E - carol
-./sensor lywsd03 sendh A4:C1:38:43:61:0E # ATC_43610E - carol
-./sensor lywsd03 send  A4:C1:38:29:CA:D6 # ATC_29CAD6 - cold frame
-./sensor lywsd03 sendh A4:C1:38:29:CA:D6 # ATC_29CAD6 - cold frame
+queryWithRetry lywsd02 send E7:2E:00:51:C0:95 # LYWSD02
+queryWithRetry lywsd02 sendh E7:2E:00:51:C0:95 # LYWSD02
+#queryWithRetry lywsd03 send A4:C1:38:36:1B:73 # ATC_361B73 - dead
+#queryWithRetry lywsd03 send A4:C1:38:B9:18:1F # ATC_B9181F - dead
+queryWithRetry lywsd03 send  A4:C1:38:43:61:0E # ATC_43610E - carol
+queryWithRetry lywsd03 sendh A4:C1:38:43:61:0E # ATC_43610E - carol
+queryWithRetry lywsd03 send  A4:C1:38:29:CA:D6 # ATC_29CAD6 - cold frame
+queryWithRetry lywsd03 sendh A4:C1:38:29:CA:D6 # ATC_29CAD6 - cold frame
 
-rm -f weather.json
-curl wttr.in/43.05,-87.98?format=j1 > weather.json
-./sendWeather
-rm -f weather.json
+getWeather
 
 popd
+
