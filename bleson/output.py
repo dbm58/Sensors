@@ -5,6 +5,8 @@ from aio import Aio
 class Output:
     @classmethod
     def toFahrenheit(cls, temp):
+        if temp == None:
+            return None
         fahrenheit = (temp * 9 / 5) + 32
         return fahrenheit
 
@@ -22,7 +24,7 @@ class Output:
         print('MAC:         ', data.mac)
         print('Name:        ', data.name)
         print('Temperature: ', f'{data.temperature} C')
-        print('             ', f'{cls.toFahrenheit(data.temperature):.2f} F')
+        print('             ', f'{cls.toFahrenheit(data.temperature):.2f} F' if data.temperature is not None else 'None F')
         print('Humidity:    ', f'{data.humidity}%')
         print('Battery:     ', f'{data.battery}%')
         print('Valid:       ', f'{data.valid}')

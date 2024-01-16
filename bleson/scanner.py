@@ -1,4 +1,4 @@
-from time import sleep
+from time import sleep, time
 import os
 import sys
 
@@ -19,12 +19,17 @@ class Scanner:
 
         observer = Observer(adapter)
         observer.on_advertising_data = collector.collect
+        
+        start = time()
+        end = start + args.timeout
 
         try:
             while not collector.done:
                 observer.start()
                 sleep(2)
                 observer.stop()
+                if time() > end:
+                    break
         except KeyboardInterrupt:
             try:
                 observer.stop()
