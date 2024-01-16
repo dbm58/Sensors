@@ -7,7 +7,7 @@ import sys
 
 from Adafruit_IO import Client, RequestError, Feed, Data
 
-import app_secrets
+import secrets
 
 def _send(aio, feed_name, value):
     if value is None:
@@ -29,6 +29,6 @@ weatherData = json.load(sys.stdin)
 temp = weatherData['current_condition'][0]['temp_F']
 print(temp)
 
-aio = Client(app_secrets.AIO_USER_NAME, app_secrets.AIO_KEY)
+aio = Client(secrets.AIO_USER_NAME, secrets.AIO_KEY)
 _send(aio, 'weather', temp);
 
