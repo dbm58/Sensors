@@ -29,6 +29,7 @@ pushd `dirname $BASH_SOURCE`
 
 queryWithRetry lywsd02 send  E7:2E:00:51:C0:95 # LYWSD02
 queryWithRetry lywsd02 sendh E7:2E:00:51:C0:95 # LYWSD02
+#queryWithRetry lywsd02 read E7:2E:00:51:C0:95 # LYWSD02
 
 popd
 
