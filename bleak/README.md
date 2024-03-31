@@ -1,3 +1,14 @@
+
+
+# To install:
+```
+> python3.11 -m venv venv
+> pip install adafruit-io
+> pip install bleak
+```
+
+# References
+
 BLE Scan:
 https://raspberrypi.stackexchange.com/q/137823
 
