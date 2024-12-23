@@ -2,15 +2,26 @@
 
 import cli
 
-# ./sensor <type> <mac> send --temperature --humidity
-#                       read
-#                       battery
-#                       firmware
-#                       setc
-#                       setf
-#                       sync
-#                       temperature
+# ./sensor [opts] <mac> <type> <command>
+#
+# where [opts] is:
+#       -v --verbose - additional (debugging) output
+#
+# where <type> is:
+#       lywsd02 - clock
+#       lywsd03 - puck
+#
+# where <command> is:
+#       send --temperature --humidity
+#       read
+#       battery
+#       firmware
+#       setc
+#       setf
+#       sync
+#       temperature
 
 args = cli.parse()
-args.execute(args)
-print(args)
+if args.verbose:
+    print(args)
+#args.execute(args)

@@ -28,7 +28,8 @@ uuids = SimpleNamespace(**characteristics)
 
 class Lywsd03:
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, mac, notification_timeout=5.0):
+    def __init__(self, mac, notification_timeout=10.0):
+        print("in ctor, mac=", mac)
         self._mac = mac
         self._peripheral = btle.Peripheral()
         self._notification_timeout = notification_timeout

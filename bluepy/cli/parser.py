@@ -1,21 +1,24 @@
 import argparse
 
-
 from .lywsd02 import parse as lywsd02Parse
 from .lywsd03 import parse as lywsd03Parse
 
-# ./sensor <type> <mac> send --temperature --humidity
-#                       read
-#                       battery
-#                       firmware
-#                       setc
-#                       setf
-#                       sync
-#                       temperature
-
 def parse():
     parser = argparse.ArgumentParser("sensor")
-    parser.add_argument("mac", help="mac address", action="store")
+
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="display additional output"
+        )
+
+    parser.add_argument(
+        "mac",
+        help="mac address",
+        action="store"
+        )
+
     deviceParser = parser.add_subparsers(
         dest="device",
         help="devices",
