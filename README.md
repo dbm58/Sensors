@@ -15,3 +15,13 @@ Possible future projects:
 | nodejs | ... |
 | circuitpython | ... |
 
+# Install
+
+1.  `sudo cp push2aio.logrotate /etc/logrotate.d`
+2.  ```
+sudo touch /var/push2aio
+sudo chgrp adm /var/push2aio
+sudo chmod 660 /var/push2aio
+```
+3.  `crontab -e`
+    */15 * * * * /home/pi/ble-sensor/run.sh >> /var/log/push2aio 2>&1

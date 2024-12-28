@@ -1,2 +1,6 @@
-bleson
+# There is a bug in bleson that goofs up the padding.  See this issue:
+#    https://github.com/TheCellule/python-bleson/issues/92
+# Until this is fixed, use the fork from WouterGritter
+# bleson
+pip install git+https://github.com/WouterGritter/python-bleson.git
 adafruit-io
