@@ -1,0 +1,17 @@
+#  ------------------------------------------------
+#  to install:
+#      sudo cp SendToAio.logrotate /etc/logrotate.d
+#      sudo touch /var/log/SendToAio
+#      sudo chmod 660 /var/log/SendToAio
+#      sudo chown root:adm /var/log/SendToAio
+#  ------------------------------------------------
+/var/log/SendToAio
+{
+    rotate 7
+    daily
+    missingok
+    delaycompress
+    compress
+    create 0660 root adm
+    endscript
+}
